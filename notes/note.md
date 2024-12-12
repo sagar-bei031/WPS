@@ -25,7 +25,7 @@ pip install pywifi
 
 ## 5. Use `sqlite3`
 ``` bash
-sqlite3 # preinstalled in Ubuntu
+python -m sqlite3 # preinstalled with python
 ```
 
 ## 6. Use `pip-tools` to filter `requirement.txt`
