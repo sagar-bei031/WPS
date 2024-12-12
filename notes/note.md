@@ -26,6 +26,7 @@ pip install pywifi
 ## 5. Use `sqlite3`
 ``` bash
 python -m sqlite3 # preinstalled with python
+sudo apt install sqlite3 # debian install
 ```
 
 ## 6. Use `pip-tools` to filter `requirement.txt`
