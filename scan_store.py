@@ -1,67 +1,64 @@
 import sqlite3
-import subprocess
-import json
+import sys
+from datetime import datetime
+from pywifi import PyWiFi
 
-# Database setup
-def setup_database():
-    conn = sqlite3.connect("wifi_positioning.db")
+def scan_wifi():
+    """Scan available Wi-Fi networks and return details."""
+    wifi = PyWiFi()
+    iface = wifi.interfaces()[0]  # Get the first wireless interface
+    iface.scan()
+    print("Scanning for networks...")
+    scan_results = iface.scan_results()
+    networks = []
+    for result in scan_results:
+        ssid = result.ssid
+        bssid = result.bssid
+        rssi = result.signal
+        networks.append((ssid, bssid, rssi))
+    return networks
+
+def store_to_db(position, networks):
+    """Store Wi-Fi scan data into an SQLite database."""
+    conn = sqlite3.connect("wifi_data.db")
     cursor = conn.cursor()
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS wifi_scans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            position TEXT NOT NULL,
+        CREATE TABLE IF NOT EXISTS wifi_data (
+            position TEXT,
             ssid TEXT,
             bssid TEXT,
-            rssi INTEGER
+            rssi INTEGER,
+            scan_time TEXT
         )
     """)
+    scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for ssid, bssid, rssi in networks:
+        cursor.execute(
+            "INSERT INTO wifi_data (position, ssid, bssid, rssi, scan_time) VALUES (?, ?, ?, ?, ?)",
+            (position, ssid, bssid, rssi, scan_time)
+        )
     conn.commit()
-    return conn, cursor
+    conn.close()
 
-# Function to scan Wi-Fi
-def scan_wifi():
-    try:
-        # Execute Linux Wi-Fi scan command
-        result = subprocess.run(['nmcli', '-t', '-f', 'SSID,BSSID,SIGNAL', 'dev', 'wifi'],
-                                stdout=subprocess.PIPE,
-                                text=True)
-        output = result.stdout.strip()
-        networks = []
-        for line in output.splitlines():
-            parts = line.split(':')
-            if len(parts) == 3:
-                ssid, bssid, rssi = parts
-                networks.append({"ssid": ssid, "bssid": bssid, "rssi": int(rssi)})
-        return networks
-    except Exception as e:
-        print(f"Error scanning Wi-Fi: {e}")
-        return []
-
-# Save scan data to database
-def save_to_database(cursor, conn, position, wifi_data):
-    for network in wifi_data:
-        cursor.execute("""
-            INSERT INTO wifi_scans (position, ssid, bssid, rssi)
-            VALUES (?, ?, ?, ?)
-        """, (position, network['ssid'], network['bssid'], network['rssi']))
-    conn.commit()
-    print("Data saved successfully!")
-
-# Main script
 if __name__ == "__main__":
-    position = input("Enter current position (e.g., 'Room A, Corner 1'): ")
-    
-    # Setup database
-    conn, cursor = setup_database()
+    # Ensure position is passed as a command-line argument
+    if len(sys.argv) != 2:
+        print("Usage: python scan_store.py <position>")
+        sys.exit(1)
 
-    # Scan Wi-Fi
-    wifi_data = scan_wifi()
-    if wifi_data:
-        print("Wi-Fi scan completed. Saving data to database...")
-        save_to_database(cursor, conn, position, wifi_data)
+    position = sys.argv[1]  # Get the position from command-line arguments
+
+    # Scan for Wi-Fi networks
+    networks = scan_wifi()
+
+    # Check if networks were found
+    if networks:
+        print(f"Found {len(networks)} networks.")
+        for ssid, bssid, rssi in networks:
+            print(f"SSID: {ssid}, BSSID: {bssid}, RSSI: {rssi}")
+
+        # Store networks in the database
+        store_to_db(position, networks)
+        print("Data stored successfully.")
     else:
         print("No Wi-Fi networks found.")
-
-    # Close database connection
-    conn.close()
-    print("Database connection closed.")
