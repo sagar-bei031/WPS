@@ -14,5 +14,13 @@ sqlite3 <database_name.db>
 ```
 If name not provoded,temporaty database is created and is deleted after quit.
 
-## More
+## Commands
 `sqlite3` supports sql commands and also have its uinique style using `.` like `.table` command.
+
+## GUI
+
+### DBeaver
+Install:
+``` bash
+sudo snap install dbeaver-ce
+```
