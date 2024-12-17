@@ -12,12 +12,11 @@ def check_and_add_ssid_to_db(ssid, bssid):
     # Check if SSID exists in the database
     cursor.execute("SELECT id FROM ssids WHERE ssid = ? AND bssid = ?", (ssid, bssid))
     existing_ssid = cursor.fetchone()
+    conn.close()
 
     if existing_ssid:
-        conn.close()
         return existing_ssid[0]  # Return existing ssid_id
     else:
-        conn.close()
         return None
 
 

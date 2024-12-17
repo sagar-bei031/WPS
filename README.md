@@ -23,7 +23,7 @@ source ./venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 4. Install Sqlite3 and Dbeaver
+## 4. Install Sqlite3 and Dbeaver.
 
 ```bash
 sudo apt install sqlite3

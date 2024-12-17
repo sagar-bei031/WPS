@@ -42,7 +42,6 @@ def initialize_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             scan_id INTEGER,
             ssid_id INTEGER,
-            bssid TEXT,
             rssi INTEGER,
             FOREIGN KEY (scan_id) REFERENCES scans (id),
             FOREIGN KEY (ssid_id) REFERENCES ssids (id)

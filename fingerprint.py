@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime
+from termcolor import colored
 
 from model import initialize_database
 from scan_wifi import scan_wifi
@@ -26,34 +27,62 @@ def store_scan_to_db(location_id, networks):
 
         if existing_ssid:
             ssid_id = existing_ssid[0]  # Use existing SSID ID
+            print(f"{colored(f'ID: {ssid_id}, SSID: {ssid}, BSSID: {bssid}, RSSI: {rssi}', "light_green")}")
         else:
-            print(f"SSID '{ssid}' not found in database. Skipping scan for this SSID.")
+            print(f"{colored(f'SSID: {ssid}, BSSID: {bssid}, RSSI: {rssi}', "light_yellow")}")
             continue  # Skip the scan for SSID if it's not in the database
 
         # Insert Wi-Fi signal record
         cursor.execute("""
-            INSERT INTO wifi_signals (scan_id, ssid_id, bssid, rssi)
-            VALUES (?, ?, ?, ?)
-        """, (scan_id, ssid_id, bssid, rssi))
+            INSERT INTO wifi_signals (scan_id, ssid_id, rssi)
+            VALUES (?, ?, ?)
+        """, (scan_id, ssid_id, rssi))
 
     conn.commit()
     conn.close()
 
 
+def get_location_from_db(location_id):
+    """Check if location ID exists in the database."""
+    conn = sqlite3.connect("wifi_fingerprints.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM locations WHERE id = ?", (location_id,))
+    location = cursor.fetchone()
+    conn.close()
+    return location
+
+
+def get_all_locations_from_db():
+    conn = sqlite3.connect("wifi_fingerprints.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM locations")
+    locations = cursor.fetchall()
+    conn.close()
+    return locations
+
+def get_ssid_id_from_db(ssid, bssid):
+    conn = sqlite3.connect("wifi_fingerprints.db")
+    cursor = conn.cursor
+    cursor.execute("SELECT id FROM ssids WHERE ssid = ? AND bssid = ?", (ssid, bssid))
+    selected_ssid = cursor.fetchone()
+    conn.close()
+    if selected_ssid:
+        return selected_ssid[0]
+    else:
+        return None
+    
+
 if __name__ == "__main__":
     while True:
-        # Ask user for location information or to view existing locations
-        print("Do you want to view existing locations? (Y/n): ", end="")
-        choice = input().strip().lower()
+        try:
+            location_id = input("\nEnter location ID or 0 to see locations: ").strip()
 
-        if choice == "y":
-            # Display existing locations
-            conn = sqlite3.connect("wifi_fingerprints.db")
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM locations")
-            locations = cursor.fetchall()
-            conn.close()
+        except KeyboardInterrupt:
+            print("\nExiting program.")
+            exit()
 
+        if location_id == "0":
+            locations = get_all_locations_from_db()
             if locations:
                 print("\nExisting Locations:")
                 print("ID | X | Y | Floor | Location Name")
@@ -61,47 +90,29 @@ if __name__ == "__main__":
                     print(f"{loc[0]} | {loc[1]} | {loc[2]} | {loc[3]} | {loc[4]}")
             else:
                 print("\nNo locations found.")
-
-        # Ask for location details
-        print("\nEnter location details.")
-        try:
-            x = float(input("X-coordinate: "))
-            y = float(input("Y-coordinate: "))
-            floor = int(input("Floor: "))
-            location_name = input("Location name: ").strip()
-        except ValueError:
-            print("Error: Invalid input. Please enter numeric values for X, Y, and floor.")
-            continue
-
-        # Confirm scanning
-        print("Proceed with scanning Wi-Fi networks at this location? (Y/n): ", end="")
-        choice = input().strip().lower()
-        if choice != "y":
-            print("Skipping scan...")
-            continue
-
-        # Scan for Wi-Fi networks
-        networks = scan_wifi()
-
-        if networks:
-            print(f"\nFound {len(networks)} networks:")
-            for ssid, bssid, rssi in networks:
-                print(f"SSID: {ssid}, BSSID: {bssid}, RSSI: {rssi}")
-
-            # Confirm storing data
-            print("\nDo you want to store this data in the database? (Y/n): ", end="")
-            choice = input().strip().lower()
-            if choice == "y":
-                store_scan_to_db(x, y, floor, location_name, networks)
-                print("Data stored successfully.")
-            else:
-                print("Data not stored.")
+            location_id = input("\nEnter location ID: ").strip()
         else:
-            print("No Wi-Fi networks found.")
+            try:
+                location_id = int(location_id)
+            except ValueError:
+                print("Error: Invalid input. Please enter a numeric value.")
+                continue
 
-        # Ask to continue or exit
-        print("\nDo you want to perform another scan? (Y/n): ", end="")
-        choice = input().strip().lower()
-        if choice != "y":
-            print("Exiting program.")
+        location =  get_location_from_db(location_id)
+        if location is None:
+            print(f"\nNo location found with id={location_id}")
+            continue
+        else:
+            location_id, x, y, floor, location_name = location[0], location[1], location[2], location[3], location[4]
+            print(f"loaction_id: {location_id}, x: {x}, y: {y}, floor: {floor}, location_name: {location_name}")
             break
+
+    # Scan for Wi-Fi networks
+    print("\nScanning wifi network.")
+    networks = scan_wifi()
+
+    if networks:
+        print(f"Found {len(networks)} networks:")
+        store_scan_to_db(location_id, networks)
+    else: 
+        print("No networks found.")
