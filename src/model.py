@@ -1,8 +1,9 @@
 import sqlite3
+from config import DB_FILE_PATH
 
 def initialize_database():
     """Initialize the database with the required tables."""
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
 
     # Create the `locations` table

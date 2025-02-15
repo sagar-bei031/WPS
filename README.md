@@ -6,7 +6,7 @@
 
 ```bash
 git clone https://github.com/sagar-bei031/WPS.git
-# OR
+# OR for ssh
 # git clone git@github.com:sagar-bei031/WPS.git 
 ```
 

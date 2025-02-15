@@ -2,11 +2,11 @@ import sqlite3
 from datetime import datetime
 from termcolor import colored
 from scan_wifi import scan_wifi
-
+from config import DB_FILE_PATH
 
 def check_and_add_ssid_to_db(ssid, bssid):
     """Check if SSID is in the database, and add if not."""
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
 
     # Check if SSID exists in the database
@@ -61,12 +61,12 @@ def scan_and_interact():
     """Scan Wi-Fi networks and interactively check/add to the database."""
     # Scan for Wi-Fi networks
     networks = scan_wifi()
+    existing_ssids = []
+    new_ssids = []
 
     if networks:
         count = len(networks)
         print(f"\nFound {count} {'network' if count == 1 else 'networks'}.")
-        existing_ssids = []
-        new_ssids = []
         for network in networks:
             ssid, bssid = network[:2]
             # Display SSID in green if it exists in the database, yellow if not
@@ -79,7 +79,7 @@ def scan_and_interact():
 
     if existing_ssids:
         print("\nExisting ssids:")
-        for index, (ssid, bssid, rssi) in enumerate(existing_ssids):
+        for index, (ssid, bssid, rssi, _) in enumerate(existing_ssids):
             print(f"{index + 1}. {colored(f'SSID: {ssid}, BSSID: {bssid}, RSSI: {rssi}', "light_green")}")
 
     if not new_ssids:
@@ -114,7 +114,7 @@ def scan_and_interact():
 
 def store_ssids_in_db(ssid, bssid):
     """Store Wi-Fi signal data in the database."""
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_NAME)
     cursor = conn.cursor()
 
     # Insert Wi-Fi signal record
