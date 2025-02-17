@@ -114,7 +114,7 @@ def scan_and_interact():
 
 def store_ssids_in_db(ssid, bssid):
     """Store Wi-Fi signal data in the database."""
-    conn = sqlite3.connect(DB_FILE_NAME)
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
 
     # Insert Wi-Fi signal record
