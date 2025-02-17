@@ -1,0 +1,4 @@
+{
+"python.terminal.shellIntegration.enabled": true,
+"python.terminal.activateEnvironment": false,
+}
