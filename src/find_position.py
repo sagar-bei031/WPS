@@ -12,7 +12,7 @@ def get_fingerprints_from_db():
         FROM wifi_signals w
         JOIN scans sc ON w.scan_id = sc.id
         JOIN locations l ON sc.location_id = l.id
-        JOIN ssids s ON w.ssid_id = s.id
+        JOIN ssids s ON w.ssid_id = s.id 
     """)
     fingerprints = cursor.fetchall()
     conn.close()
