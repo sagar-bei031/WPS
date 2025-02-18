@@ -60,7 +60,7 @@ def parse_range(range_str, max_value):
 def scan_and_interact():
     """Scan Wi-Fi networks and interactively check/add to the database."""
     # Scan for Wi-Fi networks
-    networks = scan_wifi()
+    networks = scan_wifi(verbose=True)
     existing_ssids = []
     new_ssids = []
 

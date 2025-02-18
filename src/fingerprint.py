@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     # Scan for Wi-Fi networks
     print(f"\n{colored("Do not Move!", "yellow")}")
-    networks = scan_wifi(TOTAL_SCANS_FOR_FINGERPRINT)
+    networks = scan_wifi(counnt=TOTAL_SCANS_FOR_FINGERPRINT, verbose=True)
 
     if networks:
         print(f"Found {len(networks)} networks:")
