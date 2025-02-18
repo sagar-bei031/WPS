@@ -4,11 +4,12 @@ from termcolor import colored
 
 from model import initialize_database
 from scan_wifi import scan_wifi
+from config import DB_FILE_PATH, TOTAL_SCANS_FOR_FINGERPRINT
 
 
 def store_scan_to_db(location_id, networks):
     """Store Wi-Fi scan data into the database."""
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
 
     # Insert scan record
@@ -20,7 +21,7 @@ def store_scan_to_db(location_id, networks):
     scan_id = cursor.lastrowid
 
     # Insert or retrieve SSID IDs and Wi-Fi signals
-    for ssid, bssid, rssi in networks:
+    for ssid, bssid, rssi, _ in networks:
         # Check if SSID already exists in the database
         cursor.execute("SELECT id FROM ssids WHERE ssid = ? AND bssid = ?", (ssid, bssid))
         existing_ssid = cursor.fetchone()
@@ -44,7 +45,7 @@ def store_scan_to_db(location_id, networks):
 
 def get_location_from_db(location_id):
     """Check if location ID exists in the database."""
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM locations WHERE id = ?", (location_id,))
     location = cursor.fetchone()
@@ -53,7 +54,7 @@ def get_location_from_db(location_id):
 
 
 def get_all_locations_from_db():
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM locations")
     locations = cursor.fetchall()
@@ -61,7 +62,7 @@ def get_all_locations_from_db():
     return locations
 
 def get_ssid_id_from_db(ssid, bssid):
-    conn = sqlite3.connect("wifi_fingerprints.db")
+    conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor
     cursor.execute("SELECT id FROM ssids WHERE ssid = ? AND bssid = ?", (ssid, bssid))
     selected_ssid = cursor.fetchone()
@@ -108,8 +109,8 @@ if __name__ == "__main__":
             break
 
     # Scan for Wi-Fi networks
-    print("\nScanning wifi network.")
-    networks = scan_wifi()
+    print(f"\n{colored("Do not Move!", "yellow")}")
+    networks = scan_wifi(TOTAL_SCANS_FOR_FINGERPRINT)
 
     if networks:
         print(f"Found {len(networks)} networks:")

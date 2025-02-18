@@ -5,7 +5,7 @@
 ```bash
 # Create Virtual Environment
 python3 -m venv docenv
-source ./venv/bin/acivate
+source ./docenv/bin/acivate
 
 # Install sphinx package and extensions
 pip3 install sphinx sphinx_rtd_theme myst-parser sphinx-copybutton sphinx-tabs

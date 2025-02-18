@@ -15,7 +15,7 @@ def scan_wifi(scan_count=10):
 
         for result in scan_results:
             ssid = result.ssid
-            bssid = result.bssid
+            bssid = result.bssid[:-1] # Remove ':'
             rssi = result.signal
 
             if (ssid, bssid) not in seen_networks:

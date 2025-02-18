@@ -87,7 +87,7 @@ def scan_and_interact():
         return
 
     print("\nNew ssids:")
-    for index, (ssid, bssid, rssi) in enumerate(new_ssids):
+    for index, (ssid, bssid, rssi, _) in enumerate(new_ssids):
         print(f"{index + 1}. {colored(f'SSID: {ssid}, BSSID: {bssid}, RSSI: {rssi}', "light_magenta")}")
 
     try:
