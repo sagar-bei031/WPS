@@ -1,8 +1,8 @@
-import sqlite3
-from math import sqrt
-from scan_wifi import scan_wifi
-from config import DB_FILE_PATH
 from time import sleep
+from math import sqrt
+import sqlite3
+from network import get_networks
+from config import DB_FILE_PATH
 
 def get_fingerprints_from_db():
     """Retrieve all Wi-Fi fingerprints from the database."""
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     try:
         while True:
             try:
-                real_time_data = scan_wifi(scan_count=10)
+                real_time_data = get_networks()
             except Exception as e:
                 print(f"Error scanning Wi-Fi networks: {e}")
                 continue
@@ -80,12 +80,13 @@ if __name__ == "__main__":
 
                 avg_x, avg_y, avg_floor = average_location(locations)
                 if avg_x is not None and avg_y is not None and avg_floor is not None:
-                    print(f"Estimated Location: x={avg_x:.2f}, y={avg_y:.2f}, floor={avg_floor}")
+                    print(f"x={avg_x:.2f}, y={avg_y:.2f}, floor={avg_floor}")
                 else:
-                    print("Could not determine location. No matching Wi-Fi signals found.")
+                    print("No matching Wi-Fi networks found.")
             else:
                 print("No Wi-Fi networks found.")
 
             sleep(0.5)
+
     except KeyboardInterrupt:
         print("\nProcess interrupted by user. Exiting...")

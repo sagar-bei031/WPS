@@ -23,7 +23,8 @@ def initialize_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ssid TEXT,
             bssid TEXT UNIQUE,
-            date DATETIME
+            appeared_count INTEGER DEFAULT 0,
+            date DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
@@ -43,8 +44,22 @@ def initialize_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             scan_id INTEGER,
             ssid_id INTEGER,
-            rssi INTEGER,
+            rss INTEGER,
             FOREIGN KEY (scan_id) REFERENCES scans (id),
+            FOREIGN KEY (ssid_id) REFERENCES ssids (id)
+        )
+    """)
+
+    # Create the `filtered_wifi_signals` table without `scan_id`
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS filtered_wifi_signals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            location_id INTEGER,
+            ssid_id INTEGER,
+            agg_rss INTEGER,
+            sample_num INTEGER,
+            variance REAL,
+            FOREIGN KEY (location_id) REFERENCES locations (id),
             FOREIGN KEY (ssid_id) REFERENCES ssids (id)
         )
     """)

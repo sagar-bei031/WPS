@@ -3,7 +3,7 @@ from datetime import datetime
 from termcolor import colored
 
 from model import initialize_database
-from scan_wifi import scan_wifi
+from network import get_networks
 from config import DB_FILE_PATH, TOTAL_SCANS_FOR_FINGERPRINT
 
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     # Scan for Wi-Fi networks
     print(f"\n{colored("Do not Move!", "yellow")}")
-    networks = scan_wifi(counnt=TOTAL_SCANS_FOR_FINGERPRINT, verbose=True)
+    networks = get_networks()
 
     if networks:
         print(f"Found {len(networks)} networks:")
