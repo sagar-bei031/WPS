@@ -32,8 +32,17 @@ def initialize_database():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS scans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            location_id INTEGER,
+            pass_id INTEGER,
             scan_time DATETIME,
+            FOREIGN KEY (pass_id) REFERENCES scan_passes (id)
+        )
+    """)
+    # Create the `scan_passes` table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS scan_passes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            location_id INTEGER,
+            pass_time DATETIME,
             FOREIGN KEY (location_id) REFERENCES locations (id)
         )
     """)
