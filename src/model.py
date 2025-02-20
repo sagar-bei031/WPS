@@ -13,7 +13,7 @@ def initialize_database():
             x REAL,
             y REAL,
             floor INTEGER,
-            location_name TEXT UNIQUE
+            location_name TEXT
         )
     """)
 

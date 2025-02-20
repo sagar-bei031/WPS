@@ -39,7 +39,7 @@ def store_session_to_db(location_id, session, session_time):
             bssid = network["bssid"]
             rss = network["rss"]
             # Check if SSID already exists in the database
-            cursor.execute("SELECT id FROM ssids WHERE ssid = ? AND bssid = ?", (ssid, bssid))
+            cursor.execute("SELECT id FROM ssids bssid = ?", bssid)
             existing_ssid = cursor.fetchone()
 
             if existing_ssid:
@@ -48,7 +48,7 @@ def store_session_to_db(location_id, session, session_time):
                 # print(colored(f'ID: {ssid_id}, SSID: {ssid}, BSSID: {bssid}, RSSI: {rss}', "light_green"))
             else:
                 # print(colored(f'SSID: {ssid}, BSSID: {bssid}, RSSI: {rss}', "light_yellow"))
-                continue  # Skip the scan for SSID if it's not in the database
+                continue  # Skip to store scan for SSID if it's not in the database
 
             # Insert Wi-Fi signal record
             cursor.execute("""
@@ -67,8 +67,9 @@ def store_session_to_db(location_id, session, session_time):
                 unreachable_wifi_signals_stored_count += 1
                 # print(colored(f'ID: {ssid_id}, SSID: {ssid}, BSSID: {bssid}, RSSI: {RSS_FOR_UNREACHABLE}', "light_red"))
 
-    print(f"Detected Wi-Fi signals stored: {detected_wifi_signals_stored_count}")
-    print(f"Unreachable Wi-Fi signals stored: {unreachable_wifi_signals_stored_count}")
+    print(f"Detected: {detected_wifi_signals_stored_count}")
+    print(f"Unreachable: {unreachable_wifi_signals_stored_count}")
+    print(f"Total Fingerprints Stored: {detected_wifi_signals_stored_count + unreachable_wifi_signals_stored_count}")
 
     conn.commit()
     conn.close()
@@ -164,7 +165,6 @@ if __name__ == "__main__":
 
     if session:
         store_session_to_db(location_id, session, session_time)
-        print("Fingerprints stored successfully")
     else:
         print("No Wi-Fi networks found. Please try again.")
         exit()

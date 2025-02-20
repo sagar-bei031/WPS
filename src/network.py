@@ -78,7 +78,7 @@ def get_networks():
             })
     return minimal_networks
 
-def get_networks_with_avg_rss(scan_count=10, sleep_time=DELAY_BETWEEN_SCANS):
+def get_networks_with_mean_rss(scan_count=10, sleep_time=DELAY_BETWEEN_SCANS):
     """
     Get the average rss of the networks over multiple scans.
     """

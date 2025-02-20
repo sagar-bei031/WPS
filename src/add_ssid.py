@@ -1,16 +1,16 @@
 import sqlite3
 from datetime import datetime
 from termcolor import colored
-from network import get_networks_with_median_rss
+from network import get_networks_with_mean_rss
 from config import DB_FILE_PATH, SCANS_TO_ADD_SSID
 
-def check_ssid_in_db(ssid, bssid):
+def check_ssid_in_db(bssid):
     """Check if SSID is in the database and return the SSID ID if found."""
     conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
 
     # Check if SSID exists in the database
-    cursor.execute("SELECT id FROM ssids WHERE ssid = ? AND bssid = ?", (ssid, bssid))
+    cursor.execute("SELECT id FROM ssids WHERE bssid = ?", (bssid,))
     existing_ssid = cursor.fetchone()
     conn.close()
 
@@ -83,7 +83,7 @@ def scan_and_interact():
     """Scan Wi-Fi networks and interactively check/add to the database."""
     # Scan for Wi-Fi networks
     print("Scanning Wi-Fi networks...")
-    networks = get_networks_with_median_rss(scan_count=SCANS_TO_ADD_SSID)
+    networks = get_networks_with_mean_rss(scan_count=SCANS_TO_ADD_SSID)
     existing_ssids = []
     new_ssids = []
 
@@ -95,7 +95,7 @@ def scan_and_interact():
             bssid = network.get('bssid')
             rss = network.get('rss')
             count = network.get('count', 1)  # Default count to 1 if not provided
-            id = check_ssid_in_db(ssid, bssid)
+            id = check_ssid_in_db(bssid)
             if id:
                 existing_ssids.append((id, ssid, bssid, rss, count))
             else:
