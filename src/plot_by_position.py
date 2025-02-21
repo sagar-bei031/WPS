@@ -8,7 +8,7 @@ from matplotlib import cm
 from scipy.interpolate import griddata
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QCheckBox, QHBoxLayout, QPushButton, QScrollArea, QSplitter
 from PyQt5.QtCore import Qt
-from config import DB_FILE_PATH
+from config import DB_FILE_PATH, USE_INTERPOLATION, INTERPOLATION_METHOD
 
 class PlotWindow(QMainWindow):
     def __init__(self):
@@ -92,7 +92,7 @@ class PlotWindow(QMainWindow):
         for bssid, values in self.ssid_data.items():
             if (values['ssid'], bssid) not in added_ssids:
                 checkbox = QCheckBox(f"{values['ssid']} ({bssid})", self.scroll_area_widget)
-                checkbox.stateChanged.connect(self.toggle_visibility)
+                checkbox.stateChanged.connect(self.update_plot)
                 self.scroll_area_layout.addWidget(checkbox)
                 self.ssid_checkboxes[bssid] = checkbox
                 added_ssids.add((values['ssid'], bssid))
@@ -104,39 +104,48 @@ class PlotWindow(QMainWindow):
 
         self.canvas_3d.draw()
 
-    def toggle_visibility(self):
-        """Toggle the visibility of an SSID on the 3D plot."""
-        checkbox = self.sender()
-        label = checkbox.text()
+    def update_plot(self):
+        """Update the plot based on the selected checkboxes."""
+        self.ax_3d.clear()
 
-        for bssid, values in self.ssid_data.items():
-            if label == f"{values['ssid']} ({bssid})":
-                if checkbox.isChecked():
-                    self.plot_surface(values)
-                else:
-                    self.lines_3d[bssid].remove()
-                    del self.lines_3d[bssid]
+        for bssid, checkbox in self.ssid_checkboxes.items():
+            if checkbox.isChecked():
+                values = self.ssid_data[bssid]
+                self.plot_surface(values)
 
-                self.canvas_3d.draw()
+        self.ax_3d.set_xlabel("X Coordinate")
+        self.ax_3d.set_ylabel("Y Coordinate")
+        self.ax_3d.set_zlabel("RSSI")
+        self.ax_3d.set_title("RSSI vs X and Y Coordinates")
+
+        self.canvas_3d.draw_idle()
 
     def plot_surface(self, values):
-        """Plot a smooth surface with interpolation."""
+        """Plot a smooth surface with interpolation if enabled."""
         x = np.array(values["x"])
         y = np.array(values["y"])
         rss = np.array(values["rss"])
 
-        # Create grid data for interpolation
-        xi = np.linspace(x.min(), x.max(), 100)
-        yi = np.linspace(y.min(), y.max(), 100)
-        xi, yi = np.meshgrid(xi, yi)
-        zi = griddata((x, y), rss, (xi, yi), method='cubic')
+        if USE_INTERPOLATION:
+            # Create grid data for interpolation
+            xi = np.linspace(x.min(), x.max(), 100)
+            yi = np.linspace(y.min(), y.max(), 100)
+            xi, yi = np.meshgrid(xi, yi)
+            zi = griddata((x, y), rss, (xi, yi), method=INTERPOLATION_METHOD)
 
-        norm = plt.Normalize(rss.min(), rss.max())
+            norm = plt.Normalize(rss.min(), rss.max())
 
-        # Plot trisurf with smooth gradient
-        self.lines_3d[values["ssid"]] = self.ax_3d.plot_surface(
-            xi, yi, zi, cmap='viridis', norm=norm, edgecolor='none'
-        )
+            # Plot surface with smooth gradient
+            self.ax_3d.plot_surface(
+                xi, yi, zi, cmap='viridis', norm=norm, edgecolor='none'
+            )
+        else:
+            norm = plt.Normalize(rss.min(), rss.max())
+
+            # Plot trisurf without interpolation
+            self.ax_3d.plot_trisurf(
+                x, y, rss, cmap='viridis', norm=norm, linewidth=0.1, edgecolor='none'
+            )
 
     def plot_rssi_vs_position(self):
         """Plot all SSIDs on the 3D plot with proper gradient coloring."""
@@ -152,7 +161,7 @@ class PlotWindow(QMainWindow):
         self.ax_3d.set_zlabel("RSSI")
         self.ax_3d.set_title("RSSI vs X and Y Coordinates")
 
-        self.canvas_3d.draw()
+        self.canvas_3d.draw_idle()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

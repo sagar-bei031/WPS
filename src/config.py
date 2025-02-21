@@ -33,3 +33,6 @@ USE_FILTER = True
 
 AGGREGATION = AggregationType.MEAN
 USE_AGGREGATION = True
+
+INTERPOLATION_METHOD = 'cubic'  # Options: 'linear', 'nearest', 'cubic'
+USE_INTERPOLATION = False
