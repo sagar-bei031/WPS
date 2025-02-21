@@ -1,6 +1,7 @@
 import sys
 import sqlite3
 from datetime import datetime
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QComboBox, QCheckBox, QHBoxLayout, QPushButton, QScrollArea, QSplitter
@@ -34,6 +35,14 @@ class PlotWindow(QMainWindow):
         self.scroll_area.setWidget(self.scroll_area_widget)
         self.scroll_area.setWidgetResizable(True)
         self.left_layout.addWidget(self.scroll_area)
+
+        self.filter_dropdown = QComboBox(self)
+        self.filter_dropdown.addItems(["Raw", "Moving Average", "Exponential"])
+        self.left_layout.addWidget(self.filter_dropdown)
+
+        self.apply_button = QPushButton("Apply Filter", self)
+        self.apply_button.clicked.connect(self.apply_filter)
+        self.left_layout.addWidget(self.apply_button)
 
         self.plot_button = QPushButton("Plot RSSI", self)
         self.plot_button.clicked.connect(self.plot_rssi_vs_time)
@@ -105,7 +114,7 @@ class PlotWindow(QMainWindow):
         self.ssid_checkboxes.clear()
         for bssid, values in self.ssid_data.items():
             if (values['ssid'], bssid) not in added_ssids:
-                line, = self.ax.plot(values["time"], values["rss"], label=f"{values['ssid']} ({bssid})", visible=False)
+                line, = self.ax.plot(values["time"], values["rss"], label=f"{values['ssid']} ({bssid})", visible=True)
                 self.lines[bssid] = line
                 checkbox = QCheckBox(f"{values['ssid']} ({bssid})", self.scroll_area_widget)
                 checkbox.stateChanged.connect(self.toggle_visibility)
@@ -116,6 +125,7 @@ class PlotWindow(QMainWindow):
         self.ax.set_xlabel("Time")
         self.ax.set_ylabel("RSSI")
         self.ax.set_title("RSSI vs Time for each SSID")
+        self.update_legend()
         self.canvas.draw()
 
     def toggle_visibility(self):
@@ -125,12 +135,50 @@ class PlotWindow(QMainWindow):
             if label == f"{values['ssid']} ({bssid})":
                 line = self.lines[bssid]
                 line.set_visible(checkbox.isChecked())
+                self.update_legend()
                 self.canvas.draw()
 
     def plot_rssi_vs_time(self):
         for checkbox in self.ssid_checkboxes.values():
             checkbox.setChecked(True)
+        self.update_legend()
         self.canvas.draw()
+
+    def apply_moving_average(self, data, window_size=10):
+        return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
+
+    def apply_exponential_filter(self, data, alpha=0.2):
+        filtered_data = [data[0]]
+        for i in range(1, len(data)):
+            filtered_data.append(alpha * data[i] + (1 - alpha) * filtered_data[-1])
+        return filtered_data
+
+    def apply_filter(self):
+        filter_type = self.filter_dropdown.currentText()
+        for bssid, values in self.ssid_data.items():
+            if filter_type == "Moving Average":
+                filtered_data = self.apply_moving_average(values["rss"])
+                filtered_time = values["time"][:len(filtered_data)]
+            elif filter_type == "Exponential":
+                filtered_data = self.apply_exponential_filter(values["rss"])
+                filtered_time = values["time"]
+            else:
+                filtered_data = values["rss"]
+                filtered_time = values["time"]
+
+            self.lines[bssid].set_data(filtered_time, filtered_data)
+            self.lines[bssid].set_visible(self.ssid_checkboxes[bssid].isChecked())
+
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.update_legend()
+        self.canvas.draw()
+
+    def update_legend(self):
+        handles, labels = self.ax.get_legend_handles_labels()
+        visible_handles = [handle for handle, label in zip(handles, labels) if handle.get_visible()]
+        visible_labels = [label for handle, label in zip(handles, labels) if handle.get_visible()]
+        self.ax.legend(visible_handles, visible_labels)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
