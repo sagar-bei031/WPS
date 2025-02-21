@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QComboBox, QCheckBox, QHBoxLayout, QPushButton, QScrollArea, QSplitter
 from PyQt5.QtCore import Qt
-from config import DB_FILE_PATH
+from config import DB_FILE_PATH, EXP_FILTER_ALPHA, MOVING_AVERAGE_WINDOW
 
 class PlotWindow(QMainWindow):
     def __init__(self):
@@ -144,10 +144,10 @@ class PlotWindow(QMainWindow):
         self.update_legend()
         self.canvas.draw()
 
-    def apply_moving_average(self, data, window_size=10):
+    def apply_moving_average(self, data, window_size=MOVING_AVERAGE_WINDOW):
         return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
 
-    def apply_exponential_filter(self, data, alpha=0.2):
+    def apply_exponential_filter(self, data, alpha=EXP_FILTER_ALPHA):
         filtered_data = [data[0]]
         for i in range(1, len(data)):
             filtered_data.append(alpha * data[i] + (1 - alpha) * filtered_data[-1])

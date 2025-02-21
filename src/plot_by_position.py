@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+from scipy.interpolate import griddata
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QCheckBox, QHBoxLayout, QPushButton, QScrollArea, QSplitter
 from PyQt5.QtCore import Qt
 from config import DB_FILE_PATH
@@ -111,32 +112,38 @@ class PlotWindow(QMainWindow):
         for bssid, values in self.ssid_data.items():
             if label == f"{values['ssid']} ({bssid})":
                 if checkbox.isChecked():
-                    norm = plt.Normalize(min(values["rss"]), max(values["rss"]))
-                    
-                    # **FIX: Pass RSSI as array for proper coloring**
-                    self.lines_3d[bssid] = self.ax_3d.plot_trisurf(
-                        values["x"], values["y"], values["rss"], 
-                        cmap='viridis', norm=norm, linewidth=0.1, edgecolor='none'
-                    )
+                    self.plot_surface(values)
                 else:
                     self.lines_3d[bssid].remove()
                     del self.lines_3d[bssid]
 
                 self.canvas_3d.draw()
 
+    def plot_surface(self, values):
+        """Plot a smooth surface with interpolation."""
+        x = np.array(values["x"])
+        y = np.array(values["y"])
+        rss = np.array(values["rss"])
+
+        # Create grid data for interpolation
+        xi = np.linspace(x.min(), x.max(), 100)
+        yi = np.linspace(y.min(), y.max(), 100)
+        xi, yi = np.meshgrid(xi, yi)
+        zi = griddata((x, y), rss, (xi, yi), method='cubic')
+
+        norm = plt.Normalize(rss.min(), rss.max())
+
+        # Plot trisurf with smooth gradient
+        self.lines_3d[values["ssid"]] = self.ax_3d.plot_surface(
+            xi, yi, zi, cmap='viridis', norm=norm, edgecolor='none'
+        )
+
     def plot_rssi_vs_position(self):
         """Plot all SSIDs on the 3D plot with proper gradient coloring."""
         self.ax_3d.clear()
 
         for bssid, values in self.ssid_data.items():
-            norm = plt.Normalize(min(values["rss"]), max(values["rss"]))
-
-            # **FIX: Remove facecolors & use RSSI as array to get smooth gradient**
-            self.lines_3d[bssid] = self.ax_3d.plot_trisurf(
-                values["x"], values["y"], values["rss"], 
-                cmap='viridis', norm=norm, linewidth=0.1, edgecolor='none'
-            )
-
+            self.plot_surface(values)
             if bssid in self.ssid_checkboxes:
                 self.ssid_checkboxes[bssid].setChecked(True)
 

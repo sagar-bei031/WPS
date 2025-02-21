@@ -105,14 +105,13 @@ if __name__ == "__main__":
 
     while True:
         try:
-            match PREDICTION_FILTER_TYPE:
-                case FilterType.NONE:
+            if  PREDICTION_FILTER_TYPE is FilterType.NONE:
                     real_time_networks = get_networks()
-                case FilterType.MEAN:
-                    real_time_networks = get_networks_with_mean_rss(scan_count=10, sleep_time=0)
-                case FilterType.MEDIAN:
+            elif PREDICTION_FILTER_TYPE is FilterType.MEAN:
+                real_time_networks = get_networks_with_mean_rss(scan_count=10, sleep_time=0)
+            elif PREDICTION_FILTER_TYPE is FilterType.MEDIAN:
                     real_time_networks = get_networks_with_median_rss(scan_count=10, sleep_time=0)
-                case _:
+            else:
                     raise ValueError("Invalid prediction filter type.")
                             
             x, y, floor = find_location(structured_data, real_time_networks, k=3, use_filtered=USE_FILTERED_RSS)
