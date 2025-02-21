@@ -155,13 +155,14 @@ def scan_and_interact():
                 print(f"Error: {e}")
                 return
 
-        count = len(sn_range)
+        count = 0
         if sn_range:
             print("\nAdding ssids...")
             for sn in sn_range:
                 ssid, bssid, rss, count = new_ssids[sn]
                 store_ssids_in_db(ssid, bssid, count)
                 print(f"{sn + 1}. {colored(f'SSID: {ssid}, BSSID: {bssid}, COUNT: {count}', 'light_green')}")
+                count += 2
         print(f"\n{count} {'ssid' if count == 1 else 'ssids'} added to the database.")
     else:
         print("\nCancelled.")

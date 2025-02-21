@@ -39,7 +39,7 @@ def store_session_to_db(location_id, session, session_time):
             bssid = network["bssid"]
             rss = network["rss"]
             # Check if SSID already exists in the database
-            cursor.execute("SELECT id FROM ssids bssid = ?", bssid)
+            cursor.execute("SELECT id FROM ssids WHERE bssid = ?", (bssid,))
             existing_ssid = cursor.fetchone()
 
             if existing_ssid:

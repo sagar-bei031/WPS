@@ -13,7 +13,7 @@ class FilterType(Enum):
     MODE = "mode" # Not implemented
     KALMAN = "kalman" # Not implemented yet
 
-DB_FILE_NAME = Map.ROBOTICS.value + "_wifi.db"
+DB_FILE_NAME = Map.HOME.value + "_wifi.db"
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DB_FILE_PATH = os.path.join(PROJECT_DIR, DB_FILE_NAME)
 
