@@ -3,6 +3,9 @@ import subprocess
 from time import sleep
 from statistics import median, variance
 from config import DELAY_BETWEEN_SCANS
+from pywifi import PyWiFi, const
+
+USE_PI_WIFI = True
 
 def get_rss(signal):
     """
@@ -16,13 +19,11 @@ def get_rss(signal):
     else:
         return signal / 2 - 100
 
-def scan_wifi_networks():
+def scan_wifi_networks_netsh():
     command = "netsh wlan show networks mode=bssid"
     result = subprocess.run(command, capture_output=True, text=True, shell=True)
     output = result.stdout
     
-    print(output)  # Debug: Print raw output to check formatting
-
     networks = []
     network = None
 
@@ -42,31 +43,30 @@ def scan_wifi_networks():
                 network["BSSIDs"].append({"BSSID": bssid_match.group(1)})
 
             signal_match = re.match(r"^Signal\s+:\s+(\d+)%", line)
-            if signal_match and network["BSSIDs"]:
-                network["BSSIDs"][-1]["Signal"] = signal_match.group(1)
+            if signal_match and network["BSSIDs"][-1]:
+                network["BSSIDs"][-1]["Signal"] = int(signal_match.group(1))
 
             channel_match = re.match(r"^Channel\s+:\s+(\d+)", line)
-            if channel_match and network["BSSIDs"]:
+            if channel_match and network["BSSIDs"][-1]:
                 network["BSSIDs"][-1]["Channel"] = int(channel_match.group(1))
 
             radio_match = re.match(r"^Radio type\s+:\s+(.+)", line)
-            if radio_match and network["BSSIDs"]:
+            if radio_match and network["BSSIDs"][-1]:
                 network["BSSIDs"][-1]["Radio Type"] = radio_match.group(1)
 
             band_match = re.match(r"^Band\s+:\s+(.+)", line)
-            if band_match and network["BSSIDs"]:
+            if band_match and network["BSSIDs"][-1]:
                 network["BSSIDs"][-1]["Band"] = band_match.group(1)
 
     if network:
         networks.append(network)
 
-    return networks
+    return get_minimal_networks(networks)
 
-def get_networks():
+def get_minimal_networks(networks):
     """
-    Process the list of networks and return them in the format {ssid, bssid, rss}.
+    Convert the network data to a minimal format {ssid, bssid, rss}.
     """
-    networks = scan_wifi_networks()
     minimal_networks = []
     for network in networks:
         ssid = network["SSID"]
@@ -77,6 +77,37 @@ def get_networks():
                 "rss": get_rss(bssid_info["Signal"])
             })
     return minimal_networks
+
+def scan_wifi_networks_piwifi():
+    """Scan available Wi-Fi networks."""
+    wifi = PyWiFi()
+    iface = wifi.interfaces()[0]  # Get the first wireless interface
+    iface.scan()
+    # sleep(2)  # Wait for scan results
+    results = iface.scan_results()
+
+    networks = []
+
+    for result in results:
+        ssid = result.ssid
+        bssid = result.bssid[:-1] # Remove ':' from the end
+        rss = result.signal
+        networks.append({
+            "ssid": ssid, 
+            "bssid": bssid, 
+            "rss": rss  # Use the raw signal value directly
+        })
+
+    return networks
+
+def get_networks():
+    """
+    Process the list of networks and return them in the format {ssid, bssid, rss}.
+    """
+    if USE_PI_WIFI:
+        return scan_wifi_networks_piwifi()
+    else:
+        return scan_wifi_networks_netsh()
 
 def get_networks_with_mean_rss(scan_count=10, sleep_time=DELAY_BETWEEN_SCANS):
     """
