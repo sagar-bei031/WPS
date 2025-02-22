@@ -10,15 +10,16 @@ from config import FILTER, K, USE_AGGREGATION
 def get_test_position():
     # Simulate getting a new position
     x, y, z = np.random.rand(), np.random.rand(), 1
-    print(f"Position: ({x:.2f}, {y:.2f}, {z:.2f})")
+    # print(f"Position: ({x:.2f}, {y:.2f}, {z:.2f})")
     return x, y, z
+    # return 1, 1, 1
 
-stl_file = "MyRoom.stl"
+stl_file = "Club.stl"
 mesh = trimesh.load_mesh(stl_file)
 
 # Adjust coordinate system
-vertices = mesh.vertices[:, [0, 2, 1]]
-vertices = -vertices
+vertices = mesh.vertices[:, [0, 2, 1]]  # Swap Y and Z
+vertices[:, 2] *= -1  # Invert the Z-axis
 
 faces = mesh.faces
 xmin, ymin, zmin = np.min(vertices, axis=0)
@@ -28,13 +29,13 @@ print(f"Y: {ymin:.2f} to {ymax:.2f}")
 print(f"Z: {zmin:.2f} to {zmax:.2f}")
 
 def get_map_x(x):
-    return x * 6000 - 6000
+    return x * (xmax) + xmin
 
 def get_map_y(y):
-    return y * 4000 - 4000
+    return y * (ymax) + ymin
 
 def get_map_z(z):
-    return -z * 810
+    return z * zmin
 
 # Create figure and 3D axis
 fig = plt.figure(figsize=(10, 7))
@@ -43,12 +44,11 @@ ax = fig.add_subplot(111, projection='3d')
 # Plot STL
 ax.add_collection3d(Poly3DCollection(vertices[faces], alpha=0.3, edgecolor='k'))
 
-# Initial location point
-location_point, = ax.plot([get_map_x(0.5)], [get_map_y(0.5)], [get_map_z(0)], 'ro', markersize=10, label='Location Point')
-print(f"Initial Location: ({get_map_x(0.5):.2f}, {get_map_y(0.5):.2f}, {get_map_z(0):.2f})")
+# Initialize location point without plotting
+location_point, = ax.plot([], [], [], 'ro', markersize=10, label='Location Point')
 
 # Add text label outside the graph
-text_label = ax.text2D(0.00, 1.0, f"(0.50, 0.50, 0.00)", transform=ax.transAxes, color='black', fontsize=10, verticalalignment='top')
+text_label = ax.text2D(0.4, 0.97, f"Unknown Position", transform=ax.transAxes, color='black', fontsize=10, verticalalignment='top')
 
 # Set axis limits
 ax.set_xlim(xmin, xmax)
@@ -165,11 +165,12 @@ btn_axes.on_clicked(toggle_axes)
 structured_fingerprints =  init_prediction()
 
 def update(frame):
-    x, y, floor = predict_location(structured_fingerprints, filter_type=FILTER, k=K, use_aggregation=USE_AGGREGATION)
+    # x, y, floor = predict_location(structured_fingerprints, filter_type=FILTER, k=K, use_aggregation=USE_AGGREGATION)
+    x, y, floor = get_test_position()
     location_point.set_data_3d([get_map_x(x)], [get_map_y(y)], [get_map_z(floor)])
     text_label.set_text(f"({x:.2f}, {y:.2f}, {floor:.2f})")
     return location_point, text_label
 
-ani = FuncAnimation(fig, update, interval=100, cache_frame_data=False)
+ani = FuncAnimation(fig, update, interval=1000, cache_frame_data=False)
 
 plt.show()
