@@ -2,8 +2,8 @@ import socket
 import time
 
 # Socket configuration
-HOST = '10.100.40.206'  # Server hostname or IP address
-PORT = 65432            # Port to listen on (non-privileged ports are > 1023)
+HOST = '0.0.0.0'  # Bind to all available interfaces
+PORT = 65432      # Port to listen on (non-privileged ports are > 1023)
 
 def receive_location():
     while True:
@@ -12,6 +12,7 @@ def receive_location():
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind((HOST, PORT))
                 s.listen()
+                print(f"Listening on {HOST}:{PORT}")
                 conn, addr = s.accept()
                 with conn:
                     print(f"Connected by {addr}")
@@ -27,8 +28,8 @@ def receive_location():
                         except ConnectionResetError:
                             print("Connection lost. Waiting for reconnection...")
                             break
-        except OSError:
-            print("Address already in use. Retrying in 1 second...")
+        except OSError as e:
+            print(f"Error: {e}. Retrying in 1 second...")
             time.sleep(1)
 
 def get_location():
