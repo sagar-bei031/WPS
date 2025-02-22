@@ -1,5 +1,6 @@
 import socket
 import time
+import numpy as np
 from predict import init_prediction, predict_location
 from config import FILTER, K, USE_AGGREGATION
 
@@ -7,8 +8,15 @@ from config import FILTER, K, USE_AGGREGATION
 structured_fingerprints = init_prediction()
 
 # Socket configuration
-HOST = 'localhost'  # Server hostname or IP address
-PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
+HOST = '10.100.40.206'  # Server hostname or IP address
+PORT = 65432            # Port to listen on (non-privileged ports are > 1023)
+
+def get_test_position():
+    # Simulate getting a new position
+    x, y, z = np.random.rand(), np.random.rand(), 1
+    # print(f"Position: ({x:.2f}, {y:.2f}, {z:.2f})")
+    return x, y, z
+    # return 1, 1, 1
 
 def send_location():
     while True:
@@ -17,7 +25,8 @@ def send_location():
                 s.connect((HOST, PORT))
                 while True:
                     try:
-                        x, y, floor = predict_location(structured_fingerprints, filter_type=FILTER, k=K, use_aggregation=USE_AGGREGATION)
+                        # x, y, floor = predict_location(structured_fingerprints, filter_type=FILTER, k=K, use_aggregation=USE_AGGREGATION)
+                        x, y, floor = get_test_position()
                         if x is not None and y is not None:
                             location_data = f"{x:.2f},{y:.2f},{floor}"
                             s.sendall(location_data.encode('utf-8'))

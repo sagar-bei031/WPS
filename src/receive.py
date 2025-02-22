@@ -2,13 +2,14 @@ import socket
 import time
 
 # Socket configuration
-HOST = 'localhost'  # Server hostname or IP address
-PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
+HOST = '10.100.40.206'  # Server hostname or IP address
+PORT = 65432            # Port to listen on (non-privileged ports are > 1023)
 
 def receive_location():
     while True:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind((HOST, PORT))
                 s.listen()
                 conn, addr = s.accept()
@@ -35,6 +36,7 @@ def get_location():
     while True:
         try:
             x, y, floor = next(location_generator)
+            print(f"Location: x={x:.2f}, y={y:.2f}, floor={floor}")
         except StopIteration:
             break
 
