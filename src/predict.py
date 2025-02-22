@@ -1,17 +1,17 @@
 import sqlite3
+import numpy as np
 import csv
-# import numpy as np
 import time
 from math import sqrt
-from network import get_networks, get_networks_with_mean_rss, get_networks_with_median_rss
-from config import DB_FILE_PATH, USE_FILTERED_RSS, PREDICTION_FILTER_TYPE, FilterType
+from network import get_networks
+from config import DB_FILE_PATH, FILTER, FilterType, MOVING_AVERAGE_WINDOW, EXP_FILTER_ALPHA, USE_AGGREGATION, K, STRUCTURED_FINGERPRINTS_FILE
 
-def get_fingerprints_from_db(use_filtered):
+def get_fingerprints_from_db(use_aggregation=True):
     """Retrieve all Wi-Fi fingerprints from the database."""
     conn = sqlite3.connect(DB_FILE_PATH)
     cursor = conn.cursor()
     
-    if use_filtered:
+    if use_aggregation:
         cursor.execute("""
             SELECT l.id, l.x, l.y, l.floor, s.bssid, f.agg_rss
             FROM filtered_wifi_signals f
@@ -42,34 +42,33 @@ def structure_data(fingerprints):
         data[key][bssid] = rss
 
     # Convert the dictionary to a list of dictionaries
-    structured_data = []
+    structured_fingerprints = []
     for key, rss_values in data.items():
         location_id, x, y, floor = key
         row = {"location_id": location_id, "x": x, "y": y, "floor": floor}
         row.update(rss_values)
-        structured_data.append(row)
+        structured_fingerprints.append(row)
 
-    return structured_data
+    return structured_fingerprints
 
-def save_structured_data_to_file(structured_data, filename="structured_data.csv"):
+def save_structured_fingerprints_to_file(structured_fingerprints, filename=STRUCTURED_FINGERPRINTS_FILE):
     """Save the structured data to a CSV file."""
-    if not structured_data:
+    if not structured_fingerprints:
         return
 
     with open(filename, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=structured_data[0].keys())
+        writer = csv.DictWriter(file, fieldnames=structured_fingerprints[0].keys())
         writer.writeheader()
-        writer.writerows(structured_data)
+        writer.writerows(structured_fingerprints)
 
 def calculate_distance(rssi1, rssi2):
-    """Calculate the Euclidean distance between two RSSI values using NumPy."""
-    # return np.sqrt(np.sum((np.array(rssi1) - np.array(rssi2)) ** 2))
-    return sqrt(sum((r1 - r2) ** 2 for r1, r2 in zip(rssi1, rssi2)))
+    """Calculate the Euclidean distance between two RSSI values."""
+    return np.sqrt(np.sum((np.array(rssi1) - np.array(rssi2)) ** 2))
 
-def find_location(structured_data, real_time_networks, k=3, use_filtered=False):
+def find_location(structured_fingerprints, real_time_networks, k=K, use_aggregation=True):
     """Find the location using the W_KNN algorithm."""
     distances = []
-    for fingerprint in structured_data:
+    for fingerprint in structured_fingerprints:
         location_id = fingerprint["location_id"]
         x = fingerprint["x"]
         y = fingerprint["y"]
@@ -85,40 +84,79 @@ def find_location(structured_data, real_time_networks, k=3, use_filtered=False):
     nearest_neighbors = distances[:k]
 
     if not nearest_neighbors:
-        return None, None, None  # Handle the case where no neighbors are found
+        return None, None, None
 
     # Calculate the weighted average of the nearest neighbors
-    weight_sum = sum(1 / d[0] for d in nearest_neighbors if d[0] != 0)
+    weight_sum = np.sum([1 / d[0] for d in nearest_neighbors if d[0] != 0])
     if weight_sum == 0:
         return None, None, None  # Handle the case where weight_sum is zero
 
-    x = sum((1 / d[0]) * d[2] for d in nearest_neighbors if d[0] != 0) / weight_sum
-    y = sum((1 / d[0]) * d[3] for d in nearest_neighbors if d[0] != 0) / weight_sum
+    x = np.sum([(1 / d[0]) * d[2] for d in nearest_neighbors if d[0] != 0]) / weight_sum
+    y = np.sum([(1 / d[0]) * d[3] for d in nearest_neighbors if d[0] != 0]) / weight_sum
     floor = nearest_neighbors[0][4]  # Assuming the floor is the same for the nearest neighbors
 
     return x, y, floor
 
+def moving_average_filter(data, window_size):
+    """Apply a moving average filter to the data."""
+    filtered_data = []
+    for i in range(len(data)):
+        if i < window_size:
+            filtered_data.append(data[i])
+        else:
+            window = data[i - window_size:i]
+            avg = sum(window) / window_size
+            filtered_data.append(avg)
+    return filtered_data
+
+def exponential_filter(data, alpha):
+    """Apply an exponential filter to the data."""
+    filtered_data = [data[0]]  # Initialize with the first value
+    for i in range(1, len(data)):
+        filtered_value = alpha * data[i] + (1 - alpha) * filtered_data[-1]
+        filtered_data.append(filtered_value)
+    return filtered_data
+
+def filter_real_time_networks(real_time_networks, filter_type):
+    """Filter the real-time networks based on the specified filter type."""
+    if filter_type == FilterType.NONE:
+        return real_time_networks
+    elif filter_type == FilterType.MOVING_AVERAGE:
+        for network in real_time_networks:
+            network["rss"] = moving_average_filter([network["rss"]], MOVING_AVERAGE_WINDOW)[-1]
+        return real_time_networks
+    elif filter_type == FilterType.EXPONENTIAL:
+        for network in real_time_networks:
+            network["rss"] = exponential_filter([network["rss"]], EXP_FILTER_ALPHA)[-1]
+        return real_time_networks
+    else:
+        raise ValueError("Invalid prediction filter type.")
+
+def predict_location(structured_fingerprints, filter_type, k=3, use_aggregation=False):
+    """Predict the location based on real-time networks."""
+    real_time_networks = filter_real_time_networks(get_networks(), filter_type)
+    x, y, floor = find_location(structured_fingerprints, real_time_networks, k, use_aggregation)
+    return x, y, floor
+
+def init_prediction():
+    """Initialize the prediction process."""
+    fingerprints = get_fingerprints_from_db(use_aggregation=USE_AGGREGATION)
+    structured_fingerprints = structure_data(fingerprints)
+    return structured_fingerprints
+
 if __name__ == "__main__":
-    fingerprints = get_fingerprints_from_db(use_filtered=USE_FILTERED_RSS)
-    structured_data = structure_data(fingerprints)
-    save_structured_data_to_file(structured_data)  # Save the structured data to a file
+    structured_fingerprints = init_prediction()
+    save_structured_fingerprints_to_file(structured_fingerprints)  # Save the structured data to a file
 
     while True:
         try:
-            if  PREDICTION_FILTER_TYPE is FilterType.NONE:
-                    real_time_networks = get_networks()
-            elif PREDICTION_FILTER_TYPE is FilterType.MEAN:
-                real_time_networks = get_networks_with_mean_rss(scan_count=10, sleep_time=0)
-            elif PREDICTION_FILTER_TYPE is FilterType.MEDIAN:
-                    real_time_networks = get_networks_with_median_rss(scan_count=10, sleep_time=0)
-            else:
-                    raise ValueError("Invalid prediction filter type.")
-                            
-            x, y, floor = find_location(structured_data, real_time_networks, k=3, use_filtered=USE_FILTERED_RSS)
+            x, y, floor = predict_location(structured_fingerprints, filter_type=FILTER, k=K, use_aggregation=USE_AGGREGATION)
             if x is not None and y is not None:
-                print(f"{time.time()}: Predicted location: x={x:.2f}, y={y:.2f}, floor={floor}")
+                now = time.strftime("%H:%M:%S")
+                print(f"{now}: Predicted location: x={x:.2f}, y={y:.2f}, floor={floor}")
             else:
                 print("No location found.")
+            time.sleep(1)
         except KeyboardInterrupt:
             print("\nCancelled.")
             break

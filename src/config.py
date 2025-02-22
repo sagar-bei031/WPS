@@ -29,10 +29,13 @@ RSS_FOR_UNREACHABLE = -100
 FILTER = FilterType.MOVING_AVERAGE
 MOVING_AVERAGE_WINDOW = 10
 EXP_FILTER_ALPHA = 0.2
-USE_FILTER = True
 
-AGGREGATION = AggregationType.MEAN
+AGGREGATION = AggregationType.MEDIAN
 USE_AGGREGATION = True
 
 INTERPOLATION_METHOD = 'cubic'  # Options: 'linear', 'nearest', 'cubic'
-USE_INTERPOLATION = False
+USE_INTERPOLATION = True # Used for plotting only
+
+K = 3
+STRUCTURED_FINGERPRINTS_FILE = "structured_fingerprints.csv"
+PLOT_GRAPH_WHILE_SCANNING = True
