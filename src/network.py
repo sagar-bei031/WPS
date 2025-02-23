@@ -11,6 +11,8 @@ def get_rss(signal):
     """
     Convert the signal strength to an RSS value.
     """
+    # return (signal * 0.6) - 100 # genrally -100 to -30
+    # windows follows the formula: (signal / 2) - 100
     signal = int(signal)
     if signal <= 0:
         return -100
